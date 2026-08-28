@@ -315,8 +315,8 @@ table.data-table tbody tr:hover { background: #f7f9fc; }
 /* ---------- CONFIGURAÇÃO DO SUPABASE (preencha aqui) ---------- */
 // Depois de criar seu projeto em https://supabase.com, va em
 // "Project Settings" > "API" e copie a "Project URL" e a chave "anon public".
-var SUPABASE_URL = '   https://pxindpckrarcxmiirojv.supabase.co'; // <-- troque pela URL do seu projeto
-var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB4aW5kcGNrcmFyY3htaWlyb2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4Mjk4NTAsImV4cCI6MjEwMzQwNTg1MH0.0G7rC_4TsMtl9q_K1RpHBQdptnpNmXZXCdUpihB1IZc'; // <-- troque pela chave "anon public"
+var SUPABASE_URL = 'https://SEU-PROJETO.supabase.co'; // <-- troque pela URL do seu projeto
+var SUPABASE_ANON_KEY = 'COLE_AQUI_A_CHAVE_ANON_PUBLIC_DO_SEU_PROJETO'; // <-- troque pela chave "anon public"
 
 var sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -370,9 +370,9 @@ function escapeHtml(s) {
 
 /* ---------- helpers de e-mail interno ---------- */
 // O Supabase Auth exige um e-mail. Como o sistema usa "usuário" (sem e-mail
-// de verdade), criamos um e-mail interno fixo pra cada usuário: usuario@portoex.local
+// de verdade), criamos um e-mail interno fixo pra cada usuário: usuario@portoexapp.com
 function usernameToEmail(username) {
-  return username.trim().toLowerCase().replace(/\s+/g, '') + '@portoex.local';
+  return username.trim().toLowerCase().replace(/\s+/g, '') + '@portoexapp.com';
 }
 
 /* ---------- sessao (login) ---------- */
