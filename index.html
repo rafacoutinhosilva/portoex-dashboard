@@ -241,8 +241,8 @@ table.data-table tbody tr:hover { background: #f7f9fc; }
     <div id="loginError" class="login-error"></div>
     <form id="loginForm">
       <div class="field">
-        <label for="username">Usuário</label>
-        <input type="text" id="username" autocomplete="username" required />
+        <label for="username">E-mail</label>
+        <input type="email" id="username" autocomplete="username" required />
       </div>
       <div class="field">
         <label for="password">Senha</label>
@@ -263,8 +263,8 @@ table.data-table tbody tr:hover { background: #f7f9fc; }
         <input type="text" id="signupFullName" required />
       </div>
       <div class="field">
-        <label for="signupUsername">Usuário (login)</label>
-        <input type="text" id="signupUsername" required />
+        <label for="signupUsername">E-mail</label>
+        <input type="email" id="signupUsername" required />
       </div>
       <div class="field">
         <label for="signupPassword">Senha</label>
@@ -368,13 +368,6 @@ function escapeHtml(s) {
   });
 }
 
-/* ---------- helpers de e-mail interno ---------- */
-// O Supabase Auth exige um e-mail. Como o sistema usa "usuário" (sem e-mail
-// de verdade), criamos um e-mail interno fixo pra cada usuário: usuario@portoexapp.com
-function usernameToEmail(username) {
-  return username.trim().toLowerCase().replace(/\s+/g, '') + '@portoexapp.com';
-}
-
 /* ---------- sessao (login) ---------- */
 var CURRENT_USER = null; // { id, username, role, fullName }
 
@@ -418,7 +411,7 @@ loginForm.addEventListener('submit', async function(e) {
   var password = pwInput.value;
   var remember = document.getElementById('remember').checked;
 
-  var { data, error } = await sb.auth.signInWithPassword({ email: usernameToEmail(username), password: password });
+  var { data, error } = await sb.auth.signInWithPassword({ email: username, password: password });
 
   if (error || !data.user) {
     loginError.textContent = 'Usuário ou senha inválidos.';
@@ -483,7 +476,7 @@ if (signupForm) {
     var password = document.getElementById('signupPassword').value;
 
     if (!fullName || !username || password.length < 6) {
-      signupError.textContent = 'Preencha nome, usuário e uma senha com pelo menos 6 caracteres.';
+      signupError.textContent = 'Preencha nome, e-mail e uma senha com pelo menos 6 caracteres.';
       signupError.style.display = 'block';
       signupBtn.disabled = false;
       signupBtn.textContent = 'Cadastrar';
@@ -491,14 +484,14 @@ if (signupForm) {
     }
 
     var { data, error } = await sb.auth.signUp({
-      email: usernameToEmail(username),
+      email: username,
       password: password,
       options: { data: { username: username, full_name: fullName } },
     });
 
     if (error) {
       signupError.textContent = error.message.indexOf('already') !== -1 || error.message.indexOf('registered') !== -1
-        ? 'Já existe um usuário com esse nome.'
+        ? 'Já existe um usuário com esse e-mail.'
         : ('Erro ao cadastrar: ' + error.message);
       signupError.style.display = 'block';
       signupBtn.disabled = false;
@@ -1570,7 +1563,7 @@ async function renderUsuarios() {
   content.innerHTML =
     '<div class="table-toolbar"><div></div><button class="btn-sm primary" id="newUserBtn">+ Novo usuário</button></div>' +
     '<div class="table-wrap" style="padding:4px;"><table class="users-table" id="usersTable">' +
-    '<thead><tr><th>Usuário</th><th>Nome</th><th>Perfil</th><th>Criado em</th><th></th></tr></thead>' +
+    '<thead><tr><th>E-mail</th><th>Nome</th><th>Perfil</th><th>Criado em</th><th></th></tr></thead>' +
     '<tbody><tr><td colspan="5" class="text-muted" style="padding:16px;">Carregando...</td></tr></tbody></table></div>';
 
   document.getElementById('newUserBtn').addEventListener('click', openNewUserModal);
@@ -1607,7 +1600,7 @@ function openNewUserModal() {
   overlay.innerHTML =
     '<div class="modal-box"><h3>Novo usuário</h3>' +
       '<div class="field"><label>Nome completo</label><input type="text" id="nuName" /></div>' +
-      '<div class="field"><label>Usuário (login)</label><input type="text" id="nuUsername" /></div>' +
+      '<div class="field"><label>E-mail (login)</label><input type="email" id="nuUsername" /></div>' +
       '<div class="field"><label>Senha</label><div class="pw-wrap"><input type="password" id="nuPassword" /><button type="button" class="pw-toggle" id="nuPwToggle">mostrar</button></div></div>' +
       '<div class="field"><label>Perfil</label><select id="nuRole"><option value="user">Usuário</option><option value="admin">Administrador</option></select></div>' +
       '<div id="nuError" class="alert alert-error hidden"></div>' +
@@ -1631,7 +1624,7 @@ function openNewUserModal() {
     var saveBtn = document.getElementById('nuSave');
     errBox.classList.add('hidden');
 
-    if (!username || !password) { errBox.textContent = 'Usuário e senha são obrigatórios.'; errBox.classList.remove('hidden'); return; }
+    if (!username || !password) { errBox.textContent = 'E-mail e senha são obrigatórios.'; errBox.classList.remove('hidden'); return; }
     if (password.length < 6) { errBox.textContent = 'A senha deve ter pelo menos 6 caracteres.'; errBox.classList.remove('hidden'); return; }
 
     saveBtn.disabled = true;
@@ -1645,14 +1638,14 @@ function openNewUserModal() {
     });
 
     var { data, error } = await tempClient.auth.signUp({
-      email: usernameToEmail(username),
+      email: username,
       password: password,
       options: { data: { username: username, full_name: fullName } },
     });
 
     if (error) {
       errBox.textContent = (error.message.indexOf('already') !== -1 || error.message.indexOf('registered') !== -1)
-        ? 'Já existe um usuário com esse nome.' : ('Erro ao criar: ' + error.message);
+        ? 'Já existe um usuário com esse e-mail.' : ('Erro ao criar: ' + error.message);
       errBox.classList.remove('hidden');
       saveBtn.disabled = false;
       saveBtn.textContent = 'Criar';
