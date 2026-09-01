@@ -629,7 +629,8 @@ async function renderDashboard() {
       '<button class="btn-sm primary" id="applyFilters">Filtrar</button>' +
     '</div>' +
     '<div class="kpi-grid" id="kpiGrid">' +
-      '<div class="kpi-card"><div class="label">Total de dias</div><div class="value">-</div></div>' +
+      '<div class="kpi-card"><div class="label">Registros (motorista × dia)</div><div class="value">-</div><div class="sub" style="font-size:11px;color:var(--text-muted);margin-top:2px;">soma de todos os dias de todos os motoristas</div></div>' +
+      '<div class="kpi-card"><div class="label">Dias corridos no período</div><div class="value">-</div></div>' +
       '<div class="kpi-card"><div class="label">Motoristas</div><div class="value">-</div></div>' +
       '<div class="kpi-card"><div class="label">Horas normais</div><div class="value">-</div></div>' +
       '<div class="kpi-card"><div class="label">Horas extras</div><div class="value">-</div></div>' +
@@ -734,13 +735,14 @@ async function loadDashboard() {
 
   var cards = document.querySelectorAll('#kpiGrid .kpi-card .value');
   cards[0].textContent = rows.length;
-  cards[1].textContent = Object.keys(motoristasSet).length;
-  cards[2].textContent = minutesToHHMM(horasNormais);
-  cards[3].textContent = minutesToHHMM(horasExtras);
-  cards[4].textContent = diasComExtra;
-  cards[5].textContent = diasEstourou;
-  cards[6].textContent = minutesToHHMM(excedenteTotal);
-  cards[7].textContent = interjornadasVioladas;
+  cards[1].textContent = Object.keys(porDia).length;
+  cards[2].textContent = Object.keys(motoristasSet).length;
+  cards[3].textContent = minutesToHHMM(horasNormais);
+  cards[4].textContent = minutesToHHMM(horasExtras);
+  cards[5].textContent = diasComExtra;
+  cards[6].textContent = diasEstourou;
+  cards[7].textContent = minutesToHHMM(excedenteTotal);
+  cards[8].textContent = interjornadasVioladas;
 
   var motoristaArr = Object.keys(porMotorista).map(function(k) { return { nome: k, extras: porMotorista[k].extras }; })
     .sort(function(a, b) { return b.extras - a.extras; }).slice(0, 20);
