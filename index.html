@@ -236,6 +236,15 @@ table.data-table tbody tr:hover { background: #f7f9fc; }
   border-radius: var(--radius);
   padding: 16px;
 }
+.dash-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 28px 0 12px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border);
+}
+.dash-section-title:first-of-type { margin-top: 0; }
 .rotas-card {
   background: rgba(255,255,255,0.06);
   border-radius: 8px;
@@ -653,34 +662,35 @@ async function renderDashboard() {
       '<div class="kpi-card"><div class="label">Registros (motorista × dia)</div><div class="value">-</div><div class="sub" style="font-size:11px;color:var(--text-muted);margin-top:2px;">soma de todos os dias de todos os motoristas</div></div>' +
       '<div class="kpi-card"><div class="label">Dias corridos no período</div><div class="value">-</div></div>' +
       '<div class="kpi-card"><div class="label">Motoristas</div><div class="value">-</div></div>' +
-      '<div class="kpi-card"><div class="label">Horas normais</div><div class="value">-</div></div>' +
-      '<div class="kpi-card"><div class="label">Horas extras</div><div class="value">-</div></div>' +
-      '<div class="kpi-card"><div class="label">Dias com hora extra</div><div class="value">-</div></div>' +
-      '<div class="kpi-card" id="kpiEstourou" style="cursor:pointer;" title="Clique para ver a lista"><div class="label">Dias que estourou 12h</div><div class="value">-</div></div>' +
-      '<div class="kpi-card"><div class="label">Acúmulo acima de 12h</div><div class="value">-</div></div>' +
+      '<div class="kpi-card" id="kpiEstourou" style="cursor:pointer;" title="Clique para ver a lista"><div class="label">Registros com mais de 12h</div><div class="value">-</div></div>' +
+      '<div class="kpi-card"><div class="label">Acúmulo de extrapolação (12h)</div><div class="value">-</div></div>' +
       '<div class="kpi-card" id="kpiInterjornada" style="cursor:pointer;" title="Clique para ver a lista"><div class="label">Interjornadas violadas (&lt;11h)</div><div class="value">-</div></div>' +
     '</div>' +
-    '<div class="charts-grid">' +
-      '<div class="panel"><h3>Horas extras por motorista (top 20)</h3><canvas id="chartMotorista" height="220"></canvas></div>' +
-      '<div class="panel"><h3>Cidades com estouro de 12h (dias)</h3><canvas id="chartCidade" height="220"></canvas></div>' +
-    '</div>' +
-    '<div class="charts-grid">' +
-      '<div class="panel"><h3>Quantidade de dias que estourou 12h por motorista (top 20)</h3><canvas id="chartExcedente" height="220"></canvas></div>' +
-      '<div class="panel"><h3>Evolução de horas extras por dia</h3><canvas id="chartDia" height="220"></canvas></div>' +
-    '</div>' +
-    '<div class="panel mt-16"><h3>Estouros de 12h por data</h3><div style="height:150px;"><canvas id="chartEstourosPorData"></canvas></div></div>' +
-    '<div class="rotas-resumo mt-16" id="rotasResumo">' +
+
+    '<h2 class="dash-section-title">Regiões</h2>' +
+    '<div class="rotas-resumo" id="rotasResumo">' +
       '<div class="rotas-card"><div class="rotas-value" id="rrJornadaMedia">-</div><div class="rotas-label">Jornada média nessas rotas</div></div>' +
       '<div class="rotas-card"><div class="rotas-value" id="rrExtrapolacaoMedia">-</div><div class="rotas-label">Média de extrapolação</div></div>' +
       '<div class="rotas-card"><div class="rotas-value" id="rrRegioes">-</div><div class="rotas-label">Regiões monitoradas</div></div>' +
       '<div class="rotas-card"><div class="rotas-value" id="rrCidadesMapeadas">-</div><div class="rotas-label">Cidades mapeadas</div></div>' +
     '</div>' +
-    '<div class="panel mt-16"><h3>Mapa: cidades com estouro de 12h</h3><div id="mapaCidades"></div></div>' +
-    '<div class="panel mt-16"><h3>Causador dos estouros de 12h</h3><canvas id="chartCausador" height="200"></canvas></div>' +
-    '<div class="charts-grid mt-16">' +
+    '<div class="panel mt-16"><h3>Extrapolação de 12h por região</h3><canvas id="chartRegiao" height="200"></canvas></div>' +
+    '<div class="panel mt-16"><h3>Mapa: cidades com extrapolação de 12h</h3><div id="mapaCidades"></div></div>' +
+
+    '<h2 class="dash-section-title">Jornadas que extrapolaram 12h</h2>' +
+    '<div class="charts-grid">' +
+      '<div class="panel"><h3>Cidades com extrapolação de 12h (registros)</h3><canvas id="chartCidade" height="220"></canvas></div>' +
+      '<div class="panel"><h3>Quantidade de registros com mais de 12h por motorista (top 20)</h3><canvas id="chartExcedente" height="220"></canvas></div>' +
+    '</div>' +
+    '<div class="panel mt-16"><h3>Extrapolações de 12h por data</h3><div style="height:150px;"><canvas id="chartEstourosPorData"></canvas></div></div>' +
+    '<div class="panel mt-16"><h3>Causador das extrapolações de 12h</h3><canvas id="chartCausador" height="200"></canvas></div>' +
+
+    '<h2 class="dash-section-title">Interjornadas (descanso &lt; 11h)</h2>' +
+    '<div class="charts-grid">' +
       '<div class="panel"><h3 id="tituloInterjornadaMotorista">Interjornadas violadas por motorista</h3><canvas id="chartInterjornada" height="220"></canvas></div>' +
       '<div class="panel"><h3>Interjornadas violadas por data</h3><canvas id="chartInterjornadaPorData" height="220"></canvas></div>' +
-    '</div>';
+    '</div>' +
+    '<div class="panel mt-16"><h3>Causador das interjornadas violadas</h3><canvas id="chartCausadorInterjornada" height="200"></canvas></div>';
 
   var r = await presetRange('tudo');
   document.getElementById('fFrom').value = r.from;
@@ -721,7 +731,8 @@ async function loadDashboard() {
   var porMotorista = {}, porCidade = {}, porDia = {}, porMotoristaInterjornada = {};
   var estourosEventos = []; // {motorista, data, cidade} - para o grafico de dispersao
   var interjornadaEventos = [];
-  var estourouRows = []; // linhas completas que estouraram 12h - usado no resumo de rotas e no grafico de causador
+  var estourouRows = []; // linhas completas que extrapolaram 12h - usado no resumo de rotas e no grafico de causador
+  var interjornadaRows = []; // linhas completas com interjornada violada - usado no grafico de causador
 
   rows.forEach(function(r) {
     motoristasSet[r.condutor] = true;
@@ -738,7 +749,8 @@ async function loadDashboard() {
 
     if (r.interjornada_violada) {
       interjornadasVioladas++;
-      interjornadaEventos.push({ motorista: r.condutor, data: r.data_iso, valor: r.interjornada_min });
+      interjornadaEventos.push({ motorista: r.condutor, data: r.data_iso, valor: r.interjornada_min, causador: r.causador });
+      interjornadaRows.push(r);
       if (!porMotoristaInterjornada[r.condutor]) porMotoristaInterjornada[r.condutor] = 0;
       porMotoristaInterjornada[r.condutor]++;
     }
@@ -767,68 +779,39 @@ async function loadDashboard() {
   cards[0].textContent = rows.length;
   cards[1].textContent = Object.keys(porDia).length;
   cards[2].textContent = Object.keys(motoristasSet).length;
-  cards[3].textContent = minutesToHHMM(horasNormais);
-  cards[4].textContent = minutesToHHMM(horasExtras);
-  cards[5].textContent = diasComExtra;
-  cards[6].textContent = diasEstourou;
-  cards[7].textContent = minutesToHHMM(excedenteTotal);
-  cards[8].textContent = interjornadasVioladas;
+  cards[3].textContent = diasEstourou;
+  cards[4].textContent = minutesToHHMM(excedenteTotal);
+  cards[5].textContent = interjornadasVioladas;
 
-  var motoristaArr = Object.keys(porMotorista).map(function(k) { return { nome: k, extras: porMotorista[k].extras }; })
-    .sort(function(a, b) { return b.extras - a.extras; }).slice(0, 20);
   var cidadeArr = Object.keys(porCidade).map(function(k) { return { nome: k, diasEstourou: porCidade[k].diasEstourou }; })
     .filter(function(r) { return r.diasEstourou > 0; })
     .sort(function(a, b) { return b.diasEstourou - a.diasEstourou; }).slice(0, 20);
   var excedenteArr = Object.keys(porMotorista).map(function(k) { return { nome: k, qtd: porMotorista[k].estourou }; })
     .filter(function(r) { return r.qtd > 0; })
     .sort(function(a, b) { return b.qtd - a.qtd; }).slice(0, 20);
-  var diaArr = Object.keys(porDia).sort().map(function(k) { return { data: k, extras: porDia[k].extras }; });
   var interjornadaArr = Object.keys(porMotoristaInterjornada).map(function(k) { return { nome: k, qtd: porMotoristaInterjornada[k] }; })
     .sort(function(a, b) { return b.qtd - a.qtd; }).slice(0, 20);
 
   destroyCharts();
-  charts.motorista = new Chart(document.getElementById('chartMotorista'), {
-    type: 'bar',
-    data: { labels: motoristaArr.map(function(r){return r.nome;}), datasets: [{ label: 'Horas extras', data: motoristaArr.map(function(r){return r.extras;}), backgroundColor: '#1e5ea8' }] },
-    options: {
-      indexAxis: 'y',
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: function(ctx) { return 'Horas extras: ' + minutesToHHMM(ctx.parsed.x); } } },
-      },
-      scales: { x: { ticks: { callback: function(v){ return Math.round(v/60)+'h'; } } } },
-    },
-  });
   charts.cidade = new Chart(document.getElementById('chartCidade'), {
     type: 'bar',
-    data: { labels: cidadeArr.map(function(r){return r.nome;}), datasets: [{ label: 'Dias que estourou 12h', data: cidadeArr.map(function(r){return r.diasEstourou;}), backgroundColor: '#c0392b' }] },
+    data: { labels: cidadeArr.map(function(r){return r.nome;}), datasets: [{ label: 'Registros com mais de 12h', data: cidadeArr.map(function(r){return r.diasEstourou;}), backgroundColor: '#c0392b' }] },
     options: { plugins: { legend: { display: false } } },
   });
   charts.excedente = new Chart(document.getElementById('chartExcedente'), {
     type: 'bar',
-    data: { labels: excedenteArr.map(function(r){return r.nome;}), datasets: [{ label: 'Dias que estourou 12h', data: excedenteArr.map(function(r){return r.qtd;}), backgroundColor: '#c0392b' }] },
+    data: { labels: excedenteArr.map(function(r){return r.nome;}), datasets: [{ label: 'Registros com mais de 12h', data: excedenteArr.map(function(r){return r.qtd;}), backgroundColor: '#c0392b' }] },
     options: {
       indexAxis: 'y',
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' dia' : ' dias') + ' com estouro de 12h'; } } },
+        tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' registro' : ' registros') + ' com mais de 12h'; } } },
       },
       scales: { x: { ticks: { stepSize: 1, precision: 0 } } },
     },
   });
-  charts.dia = new Chart(document.getElementById('chartDia'), {
-    type: 'line',
-    data: { labels: diaArr.map(function(r){return isoToBr(r.data);}), datasets: [{ label: 'Horas extras', data: diaArr.map(function(r){return r.extras;}), borderColor: '#1e5ea8', backgroundColor: 'rgba(30,94,168,0.15)', fill: true, tension: 0.25 }] },
-    options: {
-      plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: function(ctx) { return 'Horas extras: ' + minutesToHHMM(ctx.parsed.y); } } },
-      },
-      scales: { y: { ticks: { callback: function(v){ return Math.round(v/60)+'h'; } } } },
-    },
-  });
 
-  // Barras por data: quantos estouros de 12h aconteceram em cada dia,
+  // Barras por data: quantas extrapolações de 12h aconteceram em cada dia,
   // com os nomes dos motoristas aparecendo ao passar o mouse.
   var porDataEstouro = {};
   estourosEventos.forEach(function(e) {
@@ -845,7 +828,7 @@ async function loadDashboard() {
     data: {
       labels: datasComEstouro,
       datasets: [{
-        label: 'Estouros de 12h',
+        label: 'Extrapolações de 12h',
         data: datasComEstouro.map(function(d) { return porDataEstouro[d].length; }),
         backgroundColor: '#c0392b',
       }],
@@ -855,7 +838,7 @@ async function loadDashboard() {
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: {
-          label: function(ctx) { return ctx.parsed.y + (ctx.parsed.y === 1 ? ' estouro' : ' estouros'); },
+          label: function(ctx) { return ctx.parsed.y + (ctx.parsed.y === 1 ? ' extrapolação' : ' extrapolações'); },
           afterLabel: function(ctx) {
             var nomes = porDataEstouro[ctx.label] || [];
             return nomes.map(function(n) { return '• ' + n; });
@@ -920,7 +903,7 @@ async function loadDashboard() {
 
   renderMapaCidades(porCidade);
 
-  // ---------- Resumo das rotas com estouro (4 cartões) ----------
+  // ---------- Resumo das rotas (4 cartões, foco em regiões) ----------
   if (estourouRows.length > 0) {
     var somaJornada = estourouRows.reduce(function(s, r) { return s + (r.jornada_diaria_min || 0); }, 0);
     var somaExcedente = estourouRows.reduce(function(s, r) { return s + excedente12hMin(r); }, 0);
@@ -945,7 +928,30 @@ async function loadDashboard() {
   });
   document.getElementById('rrRegioes').textContent = Object.keys(regioesSet).length;
 
-  // ---------- Causador dos estouros de 12h ----------
+  // ---------- Extrapolação de 12h por região ----------
+  var porRegiao = {};
+  estourouRows.forEach(function(r) {
+    if (!r.cidade) return;
+    var reg = regioesMap[normalizeCityName(r.cidade.trim())];
+    if (!reg) return; // cidade ainda sem regiao definida - nao entra no grafico
+    porRegiao[reg] = (porRegiao[reg] || 0) + 1;
+  });
+  var regiaoArr = Object.keys(porRegiao).map(function(k) { return { nome: k, qtd: porRegiao[k] }; })
+    .sort(function(a, b) { return b.qtd - a.qtd; });
+  charts.regiao = new Chart(document.getElementById('chartRegiao'), {
+    type: 'bar',
+    data: { labels: regiaoArr.map(function(r){return r.nome;}), datasets: [{ label: 'Extrapolações de 12h', data: regiaoArr.map(function(r){return r.qtd;}), backgroundColor: '#1e5ea8' }] },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' extrapolação' : ' extrapolações') + ' de 12h'; } } },
+      },
+      scales: { x: { ticks: { stepSize: 1, precision: 0 } } },
+    },
+  });
+
+  // ---------- Causador das extrapolações de 12h ----------
   var porCausador = {};
   estourouRows.forEach(function(r) {
     var causador = (r.causador || '').trim() || 'Não informado';
@@ -955,12 +961,33 @@ async function loadDashboard() {
     .sort(function(a, b) { return b.qtd - a.qtd; });
   charts.causador = new Chart(document.getElementById('chartCausador'), {
     type: 'bar',
-    data: { labels: causadorArr.map(function(r){return r.nome;}), datasets: [{ label: 'Estouros de 12h', data: causadorArr.map(function(r){return r.qtd;}), backgroundColor: causadorArr.map(function(r){return r.nome === 'Não informado' ? '#9ca3af' : '#1e5ea8';}) }] },
+    data: { labels: causadorArr.map(function(r){return r.nome;}), datasets: [{ label: 'Extrapolações de 12h', data: causadorArr.map(function(r){return r.qtd;}), backgroundColor: causadorArr.map(function(r){return r.nome === 'Não informado' ? '#9ca3af' : '#1e5ea8';}) }] },
     options: {
       indexAxis: 'y',
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' estouro' : ' estouros'); } } },
+        tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' extrapolação' : ' extrapolações'); } } },
+      },
+      scales: { x: { ticks: { stepSize: 1, precision: 0 } } },
+    },
+  });
+
+  // ---------- Causador das interjornadas violadas ----------
+  var porCausadorInterjornada = {};
+  interjornadaRows.forEach(function(r) {
+    var causador = (r.causador || '').trim() || 'Não informado';
+    porCausadorInterjornada[causador] = (porCausadorInterjornada[causador] || 0) + 1;
+  });
+  var causadorInterjornadaArr = Object.keys(porCausadorInterjornada).map(function(k) { return { nome: k, qtd: porCausadorInterjornada[k] }; })
+    .sort(function(a, b) { return b.qtd - a.qtd; });
+  charts.causadorInterjornada = new Chart(document.getElementById('chartCausadorInterjornada'), {
+    type: 'bar',
+    data: { labels: causadorInterjornadaArr.map(function(r){return r.nome;}), datasets: [{ label: 'Interjornadas violadas', data: causadorInterjornadaArr.map(function(r){return r.qtd;}), backgroundColor: causadorInterjornadaArr.map(function(r){return r.nome === 'Não informado' ? '#9ca3af' : '#b7791f';}) }] },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' interjornada violada' : ' interjornadas violadas'); } } },
       },
       scales: { x: { ticks: { stepSize: 1, precision: 0 } } },
     },
@@ -993,7 +1020,7 @@ function renderMapaCidades(porCidade) {
     .filter(function(e) { return e.diasEstourou > 0; });
 
   if (entries.length === 0) {
-    container.innerHTML = '<p class="text-muted" style="font-size:13px;padding:10px 0;">Nenhum estouro de 12h no período/filtro selecionado.</p>';
+    container.innerHTML = '<p class="text-muted" style="font-size:13px;padding:10px 0;">Nenhuma extrapolação de 12h no período/filtro selecionado.</p>';
     return;
   }
 
@@ -1200,7 +1227,7 @@ function renderMapaCidades(porCidade) {
 
   function showTooltip(f, clientX, clientY) {
     var wrapRect = wrap.getBoundingClientRect();
-    tooltip.innerHTML = '<b>' + escapeHtml(f.nome) + '</b><br/>' + f.diasEstourou + (f.diasEstourou === 1 ? ' dia' : ' dias') + ' com estouro de 12h<br/><span class="hint">clique para ver os registros</span>';
+    tooltip.innerHTML = '<b>' + escapeHtml(f.nome) + '</b><br/>' + f.diasEstourou + (f.diasEstourou === 1 ? ' registro' : ' registros') + ' com mais de 12h<br/><span class="hint">clique para ver os registros</span>';
     tooltip.style.left = (clientX - wrapRect.left) + 'px';
     tooltip.style.top = (clientY - wrapRect.top) + 'px';
     tooltip.classList.add('visible');
@@ -1237,7 +1264,7 @@ function renderRegistros() {
       '<div class="f-field"><label>Até</label><input type="date" id="rTo" /></div>' +
       '<div class="f-field"><label>Motorista</label><input type="text" id="rMotorista" placeholder="Nome..." /></div>' +
       '<div class="f-field"><label>Cidade</label><input type="text" id="rCidade" placeholder="Cidade..." /></div>' +
-      '<div class="f-field"><label>&nbsp;</label><label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;font-size:13px;padding:7px 0;"><input type="checkbox" id="rOnlyEstourou" /> Só estourou 12h</label></div>' +
+      '<div class="f-field"><label>&nbsp;</label><label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;font-size:13px;padding:7px 0;"><input type="checkbox" id="rOnlyEstourou" /> Só extrapolou 12h</label></div>' +
       '<div class="f-field"><label>&nbsp;</label><label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;font-size:13px;padding:7px 0;"><input type="checkbox" id="rOnlySemCidade" /> Só sem cidade</label></div>' +
       '<div class="f-field"><label>&nbsp;</label><label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;font-size:13px;padding:7px 0;"><input type="checkbox" id="rOnlyInterjornada" /> Só interjornada violada</label></div>' +
       '<button class="btn-sm primary" id="rApply">Filtrar</button>' +
@@ -1249,7 +1276,7 @@ function renderRegistros() {
     '<div class="table-wrap"><div style="overflow-x:auto;">' +
     '<table class="data-table"><thead><tr>' +
       '<th>Data</th><th>Motorista</th><th>Placa</th><th>Jornada</th><th>Cidade</th><th>Causador</th>' +
-    '<th>Horas Normais</th><th>Horas Extras</th><th>Estourou 12h?</th><th>Interjornada</th><th>Dia da Semana</th>' +
+    '<th>Horas Normais</th><th>Horas Extras</th><th>Extrapolou 12h?</th><th>Interjornada</th><th>Dia da Semana</th>' +
     '</tr></thead><tbody id="rTbody"><tr><td colspan="11" class="text-muted" style="padding:20px;">Carregando...</td></tr></tbody></table>' +
     '</div>' +
     '<div class="pagination"><div id="pagInfo">-</div><div class="btns">' +
@@ -1349,7 +1376,7 @@ async function exportData(kind) {
       'Motorista': r.condutor, 'Matricula': r.matricula, 'Data': r.data, 'Dia da Semana': r.dia_semana,
       'Tipo': r.tipo, 'Cidade': r.cidade || '', 'Placa': r.placa || '', 'Causador': r.causador || '',
       'Horas Normais': minutesToHHMM(r.horas_normais_min), 'Horas Extras': minutesToHHMM(r.horas_extras_min),
-      'Jornada Diaria (usada p/ estouro 12h)': minutesToHHMM(r.jornada_diaria_min), 'Jornada Total (com intervalo)': minutesToHHMM(r.jornada_total_min != null ? r.jornada_total_min : r.jornada_diaria_min), 'Estourou 12h?': r.estourou_12h ? 'Sim' : 'Nao',
+      'Jornada Diaria (usada p/ verificar extrapolacao de 12h)': minutesToHHMM(r.jornada_diaria_min), 'Jornada Total (com intervalo)': minutesToHHMM(r.jornada_total_min != null ? r.jornada_total_min : r.jornada_diaria_min), 'Extrapolou 12h?': r.estourou_12h ? 'Sim' : 'Nao',
       'Acumulo acima de 12h': minutesToHHMM(excedente12hMin(r)),
       'Interjornada (descanso)': r.interjornada_min != null ? minutesToHHMM(r.interjornada_min) : '',
       'Interjornada violada (<11h)?': r.interjornada_min == null ? '' : (r.interjornada_violada ? 'Sim' : 'Nao'),
