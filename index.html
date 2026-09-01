@@ -227,6 +227,27 @@ table.data-table tbody tr:hover { background: #f7f9fc; }
 }
 .map-zoom-btn:hover { background: #f1f4f8; }
 .map-zoom-btn.map-zoom-reset { font-size: 13px; }
+
+.rotas-resumo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  background: var(--navy);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.rotas-card {
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.rotas-value { font-size: 22px; font-weight: 700; color: #ff8a5c; }
+.rotas-label { font-size: 11px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 4px; }
+
+.regioes-table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 10px; }
+.regioes-table th { text-align: left; padding: 8px 10px; background: #f1f4f8; font-size: 12px; text-transform: uppercase; color: var(--text-muted); }
+.regioes-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+.regioes-table input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; font-size: 13px; }
 .text-muted { color: var(--text-muted); }
 .mt-16 { margin-top: 16px; }
 </style>
@@ -648,7 +669,14 @@ async function renderDashboard() {
       '<div class="panel"><h3>Evolução de horas extras por dia</h3><canvas id="chartDia" height="220"></canvas></div>' +
     '</div>' +
     '<div class="panel mt-16"><h3>Estouros de 12h por data</h3><div style="height:150px;"><canvas id="chartEstourosPorData"></canvas></div></div>' +
+    '<div class="rotas-resumo mt-16" id="rotasResumo">' +
+      '<div class="rotas-card"><div class="rotas-value" id="rrJornadaMedia">-</div><div class="rotas-label">Jornada média nessas rotas</div></div>' +
+      '<div class="rotas-card"><div class="rotas-value" id="rrExtrapolacaoMedia">-</div><div class="rotas-label">Média de extrapolação</div></div>' +
+      '<div class="rotas-card"><div class="rotas-value" id="rrRegioes">-</div><div class="rotas-label">Regiões monitoradas</div></div>' +
+      '<div class="rotas-card"><div class="rotas-value" id="rrCidadesMapeadas">-</div><div class="rotas-label">Cidades mapeadas</div></div>' +
+    '</div>' +
     '<div class="panel mt-16"><h3>Mapa: cidades com estouro de 12h</h3><div id="mapaCidades"></div></div>' +
+    '<div class="panel mt-16"><h3>Causador dos estouros de 12h</h3><canvas id="chartCausador" height="200"></canvas></div>' +
     '<div class="charts-grid mt-16">' +
       '<div class="panel"><h3 id="tituloInterjornadaMotorista">Interjornadas violadas por motorista</h3><canvas id="chartInterjornada" height="220"></canvas></div>' +
       '<div class="panel"><h3>Interjornadas violadas por data</h3><canvas id="chartInterjornadaPorData" height="220"></canvas></div>' +
@@ -693,6 +721,7 @@ async function loadDashboard() {
   var porMotorista = {}, porCidade = {}, porDia = {}, porMotoristaInterjornada = {};
   var estourosEventos = []; // {motorista, data, cidade} - para o grafico de dispersao
   var interjornadaEventos = [];
+  var estourouRows = []; // linhas completas que estouraram 12h - usado no resumo de rotas e no grafico de causador
 
   rows.forEach(function(r) {
     motoristasSet[r.condutor] = true;
@@ -703,6 +732,7 @@ async function loadDashboard() {
     if (r.estourou_12h) {
       diasEstourou++;
       estourosEventos.push({ motorista: r.condutor, data: r.data_iso, cidade: r.cidade || 'Não informado' });
+      estourouRows.push(r);
     }
     excedenteTotal += exced;
 
@@ -889,6 +919,52 @@ async function loadDashboard() {
   });
 
   renderMapaCidades(porCidade);
+
+  // ---------- Resumo das rotas com estouro (4 cartões) ----------
+  if (estourouRows.length > 0) {
+    var somaJornada = estourouRows.reduce(function(s, r) { return s + (r.jornada_diaria_min || 0); }, 0);
+    var somaExcedente = estourouRows.reduce(function(s, r) { return s + excedente12hMin(r); }, 0);
+    document.getElementById('rrJornadaMedia').textContent = Math.round(somaJornada / estourouRows.length / 60) + 'h';
+    document.getElementById('rrExtrapolacaoMedia').textContent = Math.round(somaExcedente / estourouRows.length / 60) + 'h';
+  } else {
+    document.getElementById('rrJornadaMedia').textContent = '0h';
+    document.getElementById('rrExtrapolacaoMedia').textContent = '0h';
+  }
+
+  var cidadesComEstouro = {};
+  estourouRows.forEach(function(r) { if (r.cidade) cidadesComEstouro[r.cidade.trim()] = true; });
+  var cidadesNomes = Object.keys(cidadesComEstouro);
+  var cidadesMapeadasCount = cidadesNomes.filter(function(c) { return !!MAPA_CITY_COORDS[normalizeCityName(c)]; }).length;
+  document.getElementById('rrCidadesMapeadas').textContent = cidadesMapeadasCount;
+
+  var regioesMap = await fetchCityRegions();
+  var regioesSet = {};
+  cidadesNomes.forEach(function(c) {
+    var reg = regioesMap[normalizeCityName(c)];
+    if (reg) regioesSet[reg] = true;
+  });
+  document.getElementById('rrRegioes').textContent = Object.keys(regioesSet).length;
+
+  // ---------- Causador dos estouros de 12h ----------
+  var porCausador = {};
+  estourouRows.forEach(function(r) {
+    var causador = (r.causador || '').trim() || 'Não informado';
+    porCausador[causador] = (porCausador[causador] || 0) + 1;
+  });
+  var causadorArr = Object.keys(porCausador).map(function(k) { return { nome: k, qtd: porCausador[k] }; })
+    .sort(function(a, b) { return b.qtd - a.qtd; });
+  charts.causador = new Chart(document.getElementById('chartCausador'), {
+    type: 'bar',
+    data: { labels: causadorArr.map(function(r){return r.nome;}), datasets: [{ label: 'Estouros de 12h', data: causadorArr.map(function(r){return r.qtd;}), backgroundColor: causadorArr.map(function(r){return r.nome === 'Não informado' ? '#9ca3af' : '#1e5ea8';}) }] },
+    options: {
+      indexAxis: 'y',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' estouro' : ' estouros'); } } },
+      },
+      scales: { x: { ticks: { stepSize: 1, precision: 0 } } },
+    },
+  });
 }
 
 /* ================= MAPA (SVG estatico, sem depender de internet/tiles) ================= */
@@ -1443,6 +1519,57 @@ async function upsertRecords(parsedRecords, filename) {
   return { total: parsedRecords.length, novos: novos, atualizados: atualizados, removidos: removidos };
 }
 
+async function fetchCityRegions() {
+  var { data, error } = await sb.from('city_regions').select('*');
+  if (error) { console.error('Erro ao buscar regiões:', error); return {}; }
+  var map = {};
+  (data || []).forEach(function(r) { map[r.cidade_normalizada] = r.regiao; });
+  return map;
+}
+
+async function refreshRegioesTable() {
+  var wrap = document.getElementById('regioesTableWrap');
+  var records = await fetchAllRecords();
+  var cidadesSet = {};
+  records.forEach(function(r) { if (r.cidade) cidadesSet[r.cidade.trim()] = true; });
+  var cidades = Object.keys(cidadesSet).sort();
+
+  if (cidades.length === 0) {
+    wrap.innerHTML = '<p class="text-muted" style="font-size:13px;">Nenhuma cidade preenchida ainda nos registros.</p>';
+    return;
+  }
+
+  var regioesMap = await fetchCityRegions();
+
+  wrap.innerHTML = '<table class="regioes-table"><thead><tr><th>Cidade</th><th>Região</th><th></th></tr></thead><tbody>' +
+    cidades.map(function(cidade) {
+      var key = normalizeCityName(cidade);
+      var regiaoAtual = regioesMap[key] || '';
+      return '<tr data-cidade="' + escapeHtml(cidade) + '"><td>' + escapeHtml(cidade) + '</td>' +
+        '<td><input type="text" class="regiao-input" value="' + escapeHtml(regiaoAtual) + '" placeholder="ex: Vale do Itajaí" /></td>' +
+        '<td><button class="btn-sm regiao-save">Salvar</button></td></tr>';
+    }).join('') + '</tbody></table>';
+
+  wrap.querySelectorAll('.regiao-save').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var tr = btn.closest('tr');
+      var cidade = tr.dataset.cidade;
+      var regiao = tr.querySelector('.regiao-input').value.trim();
+      if (!regiao) { alert('Digite o nome da região antes de salvar.'); return; }
+      btn.disabled = true; btn.textContent = 'Salvando...';
+      var { error } = await sb.from('city_regions').upsert({
+        cidade_normalizada: normalizeCityName(cidade),
+        cidade_exibicao: cidade,
+        regiao: regiao,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'cidade_normalizada' });
+      btn.disabled = false; btn.textContent = error ? 'Erro' : 'Salvo ✓';
+      if (!error) setTimeout(function() { btn.textContent = 'Salvar'; }, 1500);
+      else alert('Erro ao salvar: ' + error.message);
+    });
+  });
+}
+
 function renderImportar() {
   content.innerHTML =
     '<div class="panel" style="max-width:640px;">' +
@@ -1461,6 +1588,11 @@ function renderImportar() {
       '<div id="bulkResult"></div>' +
     '</div>' +
     '<div class="panel mt-16" style="max-width:640px;">' +
+      '<h3>Definir regiões por cidade</h3>' +
+      '<p class="text-muted" style="font-size:13px;">Agrupe as cidades em regiões (ex: "Vale do Itajaí", "Litoral Norte") pra aparecerem separadas no resumo do Dashboard. Preencha o nome da região ao lado de cada cidade e clique em "Salvar".</p>' +
+      '<div id="regioesTableWrap"><p class="text-muted" style="font-size:13px;">Carregando cidades...</p></div>' +
+    '</div>' +
+    '<div class="panel mt-16" style="max-width:640px;">' +
       '<h3>Histórico de importações</h3><div id="importHistory" class="text-muted" style="font-size:13px;">Carregando...</div>' +
     '</div>';
 
@@ -1476,6 +1608,7 @@ function renderImportar() {
   fileInput.addEventListener('change', function() { if (fileInput.files.length) handleFile(fileInput.files[0]); });
   document.getElementById('bulkApply').addEventListener('click', applyBulkLocation);
 
+  refreshRegioesTable();
   refreshImportHistory();
 }
 
