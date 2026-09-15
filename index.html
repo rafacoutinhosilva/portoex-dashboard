@@ -391,6 +391,11 @@ function minutesToHHMM(totalMinutes) {
   return negative ? '-' + str : str;
 }
 var WEEKDAYS_PT = ['domingo','segunda-feira','terca-feira','quarta-feira','quinta-feira','sexta-feira','sabado'];
+var WEEKDAYS_ABBR_PT = ['dom','seg','ter','qua','qui','sex','sáb'];
+function weekdayAbbrevFromIso(iso) {
+  var d = new Date(iso + 'T00:00:00Z');
+  return WEEKDAYS_ABBR_PT[d.getUTCDay()];
+}
 function parseBrDate(dataStr) {
   if (!dataStr) return { iso: null, weekday: null };
   var parts = dataStr.trim().split('/');
@@ -650,6 +655,12 @@ function niceBarOptions(extra) {
   return base;
 }
 
+// Altura compacta pra graficos de barra horizontal com poucas categorias
+// (ex: causador), evitando aquele espaco vazio grande quando so tem 2-3 barras.
+function compactBarHeight(n) {
+  return Math.max(90, Math.min(260, n * 46 + 34));
+}
+
 
 function route(view) {
   if (view === 'usuarios' && CURRENT_USER.role !== 'admin') view = 'dashboard';
@@ -748,14 +759,14 @@ async function renderDashboard() {
       '<div class="panel"><h3>Quantidade de registros com mais de 12h por motorista (top 20)</h3><canvas id="chartExcedente" height="220"></canvas></div>' +
     '</div>' +
     '<div class="panel mt-16"><h3>Extrapolações de 12h por data</h3><div style="height:150px;"><canvas id="chartEstourosPorData"></canvas></div></div>' +
-    '<div class="panel mt-16"><h3>Causador das extrapolações de 12h</h3><canvas id="chartCausador" height="200"></canvas></div>' +
+    '<div class="panel mt-16"><h3>Causador das extrapolações de 12h</h3><div id="chartCausadorWrap"><canvas id="chartCausador"></canvas></div></div>' +
 
     '<h2 class="dash-section-title">Interjornadas (descanso &lt; 11h)</h2>' +
     '<div class="charts-grid">' +
       '<div class="panel"><h3 id="tituloInterjornadaMotorista">Interjornadas violadas por motorista</h3><canvas id="chartInterjornada" height="220"></canvas></div>' +
       '<div class="panel"><h3>Interjornadas violadas por data</h3><canvas id="chartInterjornadaPorData" height="220"></canvas></div>' +
     '</div>' +
-    '<div class="panel mt-16"><h3>Causador das interjornadas violadas</h3><canvas id="chartCausadorInterjornada" height="200"></canvas></div>';
+    '<div class="panel mt-16"><h3>Causador das interjornadas violadas</h3><div id="chartCausadorInterjornadaWrap"><canvas id="chartCausadorInterjornada"></canvas></div></div>';
 
   var r = await presetRange('tudo');
   document.getElementById('fFrom').value = r.from;
@@ -873,26 +884,25 @@ async function loadDashboard() {
   });
 
   // Barras por data: quantas extrapolações de 12h aconteceram em cada dia,
-  // com os nomes dos motoristas aparecendo ao passar o mouse.
-  var porDataEstouro = {};
+  // com os nomes dos motoristas aparecendo ao passar o mouse. O rotulo mostra
+  // a data + o dia da semana abreviado (ex: "05/08/2026 (qua)").
+  var porDataEstouro = {}; // chave = data ISO, pra ordenar certo
   estourosEventos.forEach(function(e) {
-    var br = isoToBr(e.data);
-    if (!porDataEstouro[br]) porDataEstouro[br] = [];
-    porDataEstouro[br].push(e.motorista);
+    if (!porDataEstouro[e.data]) porDataEstouro[e.data] = [];
+    porDataEstouro[e.data].push(e.motorista);
   });
-  var datasComEstouro = Object.keys(porDataEstouro).sort(function(a, b) {
-    function toIso(d) { var p = d.split('/'); return p[2] + '-' + p[1] + '-' + p[0]; }
-    return toIso(a).localeCompare(toIso(b));
-  });
+  var datasIsoOrdenadas = Object.keys(porDataEstouro).sort();
+  var datasLabelsComDia = datasIsoOrdenadas.map(function(iso) { return isoToBr(iso) + ' (' + weekdayAbbrevFromIso(iso) + ')'; });
   charts.estourosPorData = new Chart(document.getElementById('chartEstourosPorData'), {
     type: 'bar',
-    data: { labels: datasComEstouro, datasets: [niceBarDataset('Extrapolações de 12h', datasComEstouro.map(function(d) { return porDataEstouro[d].length; }), COLOR_NEGATIVO)] },
+    data: { labels: datasLabelsComDia, datasets: [niceBarDataset('Extrapolações de 12h', datasIsoOrdenadas.map(function(iso) { return porDataEstouro[iso].length; }), COLOR_NEGATIVO)] },
     options: niceBarOptions({
       maintainAspectRatio: false,
       tooltip: {
         label: function(ctx) { return ctx.parsed.y + (ctx.parsed.y === 1 ? ' extrapolação' : ' extrapolações'); },
         afterLabel: function(ctx) {
-          var nomes = porDataEstouro[ctx.label] || [];
+          var iso = datasIsoOrdenadas[ctx.dataIndex];
+          var nomes = porDataEstouro[iso] || [];
           return nomes.map(function(n) { return '• ' + n; });
         },
       },
@@ -992,11 +1002,13 @@ async function loadDashboard() {
   });
   var causadorArr = Object.keys(porCausador).map(function(k) { return { nome: k, qtd: porCausador[k] }; })
     .sort(function(a, b) { return b.qtd - a.qtd; });
+  document.getElementById('chartCausadorWrap').style.height = compactBarHeight(causadorArr.length) + 'px';
   charts.causador = new Chart(document.getElementById('chartCausador'), {
     type: 'bar',
     data: { labels: causadorArr.map(function(r){return r.nome;}), datasets: [niceBarDataset('Extrapolações de 12h', causadorArr.map(function(r){return r.qtd;}), causadorArr.map(function(r){return r.nome === 'Não informado' ? COLOR_NEUTRO : COLOR_NEGATIVO;}))] },
     options: niceBarOptions({
       indexAxis: 'y',
+      maintainAspectRatio: false,
       tooltip: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' extrapolação' : ' extrapolações'); } },
     }),
   });
@@ -1009,11 +1021,13 @@ async function loadDashboard() {
   });
   var causadorInterjornadaArr = Object.keys(porCausadorInterjornada).map(function(k) { return { nome: k, qtd: porCausadorInterjornada[k] }; })
     .sort(function(a, b) { return b.qtd - a.qtd; });
+  document.getElementById('chartCausadorInterjornadaWrap').style.height = compactBarHeight(causadorInterjornadaArr.length) + 'px';
   charts.causadorInterjornada = new Chart(document.getElementById('chartCausadorInterjornada'), {
     type: 'bar',
     data: { labels: causadorInterjornadaArr.map(function(r){return r.nome;}), datasets: [niceBarDataset('Interjornadas violadas', causadorInterjornadaArr.map(function(r){return r.qtd;}), causadorInterjornadaArr.map(function(r){return r.nome === 'Não informado' ? COLOR_NEUTRO : COLOR_NEGATIVO;}))] },
     options: niceBarOptions({
       indexAxis: 'y',
+      maintainAspectRatio: false,
       tooltip: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' interjornada violada' : ' interjornadas violadas'); } },
     }),
   });
