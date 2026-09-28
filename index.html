@@ -314,6 +314,7 @@ table.data-table tbody tr:hover { background: #f7f9fc; }
 .rotas-value { font-size: 22px; font-weight: 700; color: #ff8a5c; }
 .rotas-label { font-size: 11px; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 4px; }
 .pie-box { height: 260px; position: relative; }
+.hbar-box { position: relative; width: 100%; }
 .pie-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; margin-top: 14px; }
 .pie-legend-item { display: flex; align-items: center; gap: 8px; background: #f6f7fa; border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 12.5px; color: var(--text); }
 .pie-legend-dot { width: 13px; height: 13px; border-radius: 4px; flex-shrink: 0; }
@@ -664,6 +665,53 @@ var COLOR_NEGATIVO = '#c0392b'; // vermelho - extrapolacao, interjornada violada
 var COLOR_POSITIVO = '#FF6428'; // laranja da marca - metrica neutra/informativa (ex: contagem simples, sem conotacao de problema)
 var COLOR_NEUTRO = '#9ca3af';   // cinza - "Nao informado"
 
+// Barras horizontais compactas (linhas juntinhas, valor no fim de cada barra)
+var HBAR_ROW = 30;
+function renderHBar(canvasId, items, opts) {
+  opts = opts || {};
+  var canvas = document.getElementById(canvasId);
+  canvas.parentElement.style.height = (Math.max(items.length, 1) * HBAR_ROW + 46) + 'px';
+  var colors = items.map(function(it) { return it.nome === 'Não informado' ? COLOR_NEUTRO : COLOR_NEGATIVO; });
+  var valueLabels = {
+    id: 'valueLabels',
+    afterDatasetsDraw: function(chart) {
+      var ctx = chart.ctx, meta = chart.getDatasetMeta(0);
+      ctx.save();
+      ctx.font = '600 11px ' + CHART_FONT.family;
+      ctx.fillStyle = '#1f2937'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+      meta.data.forEach(function(bar, i) { ctx.fillText(String(items[i].qtd), bar.x + 6, bar.y); });
+      ctx.restore();
+    },
+  };
+  charts[canvasId] = new Chart(canvas, {
+    type: 'bar',
+    data: { labels: items.map(function(i) { return i.nome; }), datasets: [{
+      label: opts.label || '', data: items.map(function(i) { return i.qtd; }),
+      backgroundColor: colors, borderRadius: 2, borderSkipped: false, barThickness: 22,
+    }] },
+    options: {
+      indexAxis: 'y', maintainAspectRatio: false,
+      layout: { padding: { right: 34, top: 2, bottom: 0 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#0B0B3C', padding: 10, cornerRadius: 8, displayColors: false,
+          bodyFont: { family: CHART_FONT.family, size: 12 },
+          callbacks: {
+            label: function(ctx) { return opts.tooltip ? opts.tooltip(ctx.parsed.x) : String(ctx.parsed.x); },
+            afterLabel: function(ctx) { var ex = items[ctx.dataIndex].extra; return ex ? ex.map(function(n) { return '• ' + n; }) : []; },
+          },
+        },
+      },
+      scales: {
+        x: { beginAtZero: true, grid: { color: '#e3ecf5' }, ticks: { font: { family: CHART_FONT.family, size: 10 }, stepSize: 1, precision: 0 } },
+        y: { grid: { display: false }, ticks: { font: { family: CHART_FONT.family, size: 11 } } },
+      },
+    },
+    plugins: [valueLabels],
+  });
+}
+
 var PIE_COLORS = ['#c0392b', '#FF6428', '#0B0B3C', '#e57373', '#f5a623', '#5c5c8a', '#8c2f1f', '#ffb199', '#3d3d80', '#d98c00', '#a83279', '#2e7d6b'];
 
 // Grafico de pizza com quadradinhos de legenda embaixo (nome - quantidade)
@@ -836,20 +884,20 @@ async function renderDashboard() {
       '<div class="rotas-card"><div class="rotas-value" id="rrRegioes">-</div><div class="rotas-label">Regiões monitoradas</div></div>' +
       '<div class="rotas-card"><div class="rotas-value" id="rrCidadesMapeadas">-</div><div class="rotas-label">Cidades mapeadas</div></div>' +
     '</div>' +
-    '<div class="panel mt-16"><h3>Extrapolação de 12h por cidade</h3><div class="pie-box"><canvas id="chartRegiao"></canvas></div><div class="pie-legend" id="legendRegiao"></div></div>' +
+    '<div class="panel mt-16"><h3>Extrapolação de 12h por cidade</h3><div class="hbar-box"><canvas id="chartRegiao"></canvas></div></div>' +
     '<div class="panel mt-16"><h3>Mapa: cidades com extrapolação de 12h</h3><div id="mapaCidades"></div></div>' +
 
     '<h2 class="dash-section-title">Jornadas que extrapolaram 12h</h2>' +
-    '<div class="panel"><h3>Quantidade de registros com mais de 12h por motorista (top 20)</h3><canvas id="chartExcedente" height="220"></canvas></div>' +
+    '<div class="panel"><h3>Quantidade de registros com mais de 12h por motorista (top 20)</h3><div class="hbar-box"><canvas id="chartExcedente"></canvas></div></div>' +
     '<div class="panel mt-16"><h3>Extrapolações de 12h por data</h3><div style="height:150px;"><canvas id="chartEstourosPorData"></canvas></div></div>' +
-    '<div class="panel mt-16"><h3>Causador das extrapolações de 12h</h3><div class="pie-box"><canvas id="chartCausador"></canvas></div><div class="pie-legend" id="legendCausador"></div></div>' +
+    '<div class="panel mt-16"><h3>Causador das extrapolações de 12h</h3><div class="hbar-box"><canvas id="chartCausador"></canvas></div></div>' +
 
     '<h2 class="dash-section-title">Interjornadas (descanso &lt; 11h)</h2>' +
     '<div class="charts-grid">' +
-      '<div class="panel"><h3 id="tituloInterjornadaMotorista">Interjornadas violadas por motorista</h3><div class="pie-box"><canvas id="chartInterjornada"></canvas></div><div class="pie-legend" id="legendInterjornada"></div></div>' +
-      '<div class="panel"><h3>Interjornadas violadas por data</h3><canvas id="chartInterjornadaPorData" height="220"></canvas></div>' +
+      '<div class="panel"><h3 id="tituloInterjornadaMotorista">Interjornadas violadas por motorista</h3><div class="hbar-box"><canvas id="chartInterjornada"></canvas></div></div>' +
+      '<div class="panel"><h3>Interjornadas violadas por data</h3><div class="hbar-box"><canvas id="chartInterjornadaPorData"></canvas></div></div>' +
     '</div>' +
-    '<div class="panel mt-16"><h3>Causador das interjornadas violadas</h3><div id="chartCausadorInterjornadaWrap"><canvas id="chartCausadorInterjornada"></canvas></div></div>';
+    '<div class="panel mt-16"><h3>Causador das interjornadas violadas</h3><div class="hbar-box"><canvas id="chartCausadorInterjornada"></canvas></div></div>';
 
   var r = await presetRange('tudo');
   document.getElementById('fFrom').value = r.from;
@@ -952,14 +1000,7 @@ async function loadDashboard() {
     .sort(function(a, b) { return b.qtd - a.qtd; }).slice(0, 20);
 
   destroyCharts();
-  charts.excedente = new Chart(document.getElementById('chartExcedente'), {
-    type: 'bar',
-    data: { labels: excedenteArr.map(function(r){return r.nome;}), datasets: [niceBarDataset('Registros com mais de 12h', excedenteArr.map(function(r){return r.qtd;}), COLOR_NEGATIVO)] },
-    options: niceBarOptions({
-      indexAxis: 'y',
-      tooltip: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' registro' : ' registros') + ' com mais de 12h'; } },
-    }),
-  });
+  renderHBar('chartExcedente', excedenteArr, { tooltip: function(q) { return q + (q === 1 ? ' registro' : ' registros') + ' com mais de 12h'; } });
 
   // Barras por data: quantas extrapolações de 12h aconteceram em cada dia,
   // com os nomes dos motoristas aparecendo ao passar o mouse. O rotulo mostra
@@ -990,7 +1031,7 @@ async function loadDashboard() {
   // Interjornada por motorista (quantidade de dias com descanso < 11h)
   document.getElementById('tituloInterjornadaMotorista').textContent =
     'Interjornadas violadas por motorista (' + interjornadaArr.length + (interjornadaArr.length === 1 ? ' motorista' : ' motoristas') + ')';
-  renderPie('chartInterjornada', 'legendInterjornada', interjornadaArr, function(q) { return q + (q === 1 ? ' dia' : ' dias') + ' com descanso < 11h'; });
+  renderHBar('chartInterjornada', interjornadaArr, { tooltip: function(q) { return q + (q === 1 ? ' dia' : ' dias') + ' com descanso < 11h'; } });
 
   // Interjornada por data (com os nomes dos motoristas no tooltip)
   var porDataInterjornada = {};
@@ -1003,19 +1044,7 @@ async function loadDashboard() {
     function toIso(d) { var p = d.split('/'); return p[2] + '-' + p[1] + '-' + p[0]; }
     return toIso(a).localeCompare(toIso(b));
   });
-  charts.interjornadaPorData = new Chart(document.getElementById('chartInterjornadaPorData'), {
-    type: 'bar',
-    data: { labels: datasComInterjornada, datasets: [niceBarDataset('Interjornadas violadas', datasComInterjornada.map(function(d) { return porDataInterjornada[d].length; }), COLOR_NEGATIVO)] },
-    options: niceBarOptions({
-      tooltip: {
-        label: function(ctx) { return ctx.parsed.y + (ctx.parsed.y === 1 ? ' interjornada violada' : ' interjornadas violadas'); },
-        afterLabel: function(ctx) {
-          var nomes = porDataInterjornada[ctx.label] || [];
-          return nomes.map(function(n) { return '• ' + n; });
-        },
-      },
-    }),
-  });
+  renderHBar('chartInterjornadaPorData', datasComInterjornada.map(function(d) { return { nome: d, qtd: porDataInterjornada[d].length, extra: porDataInterjornada[d] }; }), { tooltip: function(q) { return q + (q === 1 ? ' interjornada violada' : ' interjornadas violadas'); } });
 
   renderMapaCidades(porCidade);
 
@@ -1056,7 +1085,7 @@ async function loadDashboard() {
   });
   var cidadePieArr = Object.keys(porCidadePie).map(function(k) { return porCidadePie[k]; })
     .sort(function(a, b) { return b.qtd - a.qtd; });
-  renderPie('chartRegiao', 'legendRegiao', cidadePieArr, function(q) { return q + (q === 1 ? ' extrapolação' : ' extrapolações') + ' de 12h'; });
+  renderHBar('chartRegiao', cidadePieArr, function(q) { return q + (q === 1 ? ' extrapolação' : ' extrapolações') + ' de 12h'; });
 
   // ---------- Causador das extrapolações de 12h ----------
   var porCausador = {};
@@ -1066,7 +1095,7 @@ async function loadDashboard() {
   });
   var causadorArr = Object.keys(porCausador).map(function(k) { return { nome: k, qtd: porCausador[k] }; })
     .sort(function(a, b) { return b.qtd - a.qtd; });
-  renderPie('chartCausador', 'legendCausador', causadorArr, function(q) { return q + (q === 1 ? ' extrapolação' : ' extrapolações'); });
+  renderHBar('chartCausador', causadorArr, function(q) { return q + (q === 1 ? ' extrapolação' : ' extrapolações'); });
 
   // ---------- Causador das interjornadas violadas ----------
   var porCausadorInterjornada = {};
@@ -1076,16 +1105,7 @@ async function loadDashboard() {
   });
   var causadorInterjornadaArr = Object.keys(porCausadorInterjornada).map(function(k) { return { nome: k, qtd: porCausadorInterjornada[k] }; })
     .sort(function(a, b) { return b.qtd - a.qtd; });
-  document.getElementById('chartCausadorInterjornadaWrap').style.height = compactBarHeight(causadorInterjornadaArr.length) + 'px';
-  charts.causadorInterjornada = new Chart(document.getElementById('chartCausadorInterjornada'), {
-    type: 'bar',
-    data: { labels: causadorInterjornadaArr.map(function(r){return r.nome;}), datasets: [niceBarDataset('Interjornadas violadas', causadorInterjornadaArr.map(function(r){return r.qtd;}), causadorInterjornadaArr.map(function(r){return r.nome === 'Não informado' ? COLOR_NEUTRO : COLOR_NEGATIVO;}))] },
-    options: niceBarOptions({
-      indexAxis: 'y',
-      maintainAspectRatio: false,
-      tooltip: { label: function(ctx) { return ctx.parsed.x + (ctx.parsed.x === 1 ? ' interjornada violada' : ' interjornadas violadas'); } },
-    }),
-  });
+  renderHBar('chartCausadorInterjornada', causadorInterjornadaArr, { tooltip: function(q) { return q + (q === 1 ? ' interjornada violada' : ' interjornadas violadas'); } });
 }
 
 /* ================= MAPA (SVG estatico, sem depender de internet/tiles) ================= */
